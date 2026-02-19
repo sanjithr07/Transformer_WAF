@@ -249,9 +249,16 @@ def main():
     if args.synthetic:
         print("\n[TransWAF] Generating synthetic training dataset...")
         df = generate_synthetic_dataset(n_per_class=args.n)
-        out_path = RAW_DIR / "synthetic_dataset.csv"
-        df.to_csv(out_path, index=False)
-        print(f"[+] Saved to: {out_path}")
+        # Write as Parquet — a binary format that is 100% immune to Windows
+        # text-encoding and newline corruption issues.
+        out_path = RAW_DIR / "synthetic_dataset.parquet"
+        df.to_parquet(out_path, engine="pyarrow", index=False)
+
+        if out_path.exists():
+            print(f"[+] Saved to: {out_path}  ({out_path.stat().st_size:,} bytes)")
+        else:
+            print(f"[!] ERROR: File not created at {out_path}")
+            sys.exit(1)
         print("[+] Now run: python data/preprocess.py --source synthetic")
     else:
         print(CSIC_INFO.format(raw_dir=RAW_DIR))

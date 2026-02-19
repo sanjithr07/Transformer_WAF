@@ -202,18 +202,20 @@ def apply_mutations(request: str, label: str, n_mutations: int = 3) -> str:
 
 def generate_adversarial_set(n_per_class: int = 1000):
     """Generate adversarial test set from existing test split."""
-    test_file = PROCESSED_DIR / "test.csv"
+    # Load clean test set
+    test_file = PROCESSED_DIR / "test.parquet"
     if not test_file.exists():
-        logger.error("test.csv not found. Run preprocess.py first.")
+        logger.error(f"Clean test set not found at {test_file}. Run preprocess.py first.")
         sys.exit(1)
 
-    test_df = pd.read_csv(test_file)
+    df = pd.read_parquet(test_file, engine="pyarrow")
+    logger.info(f"Loaded {len(df)} samples from {test_file.name}")
     adversarial_records = []
 
-    attack_labels = [l for l in test_df["label"].unique() if l != "benign"]
+    attack_labels = [l for l in df["label"].unique() if l != "benign"]
 
     for label in attack_labels:
-        subset = test_df[test_df["label"] == label]
+        subset = df[df["label"] == label]
         logger.info(f"Generating {n_per_class} adversarial {label} samples...")
 
         for _ in range(n_per_class):

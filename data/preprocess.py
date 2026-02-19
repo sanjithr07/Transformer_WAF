@@ -24,7 +24,7 @@ from urllib.parse import unquote_plus, unquote
 from html import unescape
 from loguru import logger
 
-ROOT = Path(__file__).parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 RAW_DIR = ROOT / "data" / "raw"
@@ -216,13 +216,19 @@ def preprocess(source: str = "csic", input_file: Path = None,
             input_file = RAW_DIR / "captured_traffic.csv"
         df = load_captured_traffic(input_file)
     elif source == "synthetic":
-        syn_file = RAW_DIR / "synthetic_dataset.csv"
-        if not syn_file.exists():
-            logger.error(f"Synthetic dataset not found at {syn_file}")
+        syn_parquet = RAW_DIR / "synthetic_dataset.parquet"
+        logger.info(f"Looking for dataset in: {RAW_DIR}")
+
+        if syn_parquet.exists():
+            logger.info(f"Reading Parquet: {syn_parquet}")
+            df = pd.read_parquet(syn_parquet, engine="pyarrow")
+            logger.info(f"Loaded {len(df)} synthetic samples from Parquet")
+        else:
+            logger.error(f"Synthetic dataset not found at: {syn_parquet}")
             logger.error("Run: python data/download_csic.py --synthetic")
             sys.exit(1)
-        df = pd.read_csv(syn_file)
-        logger.info(f"Loaded {len(df)} synthetic samples")
+
+
     else:
         df = load_csic_2010()
 
@@ -259,10 +265,10 @@ def preprocess(source: str = "csic", input_file: Path = None,
 
     logger.info(f"Train: {len(train_df)}, Val: {len(val_df)}, Test: {len(test_df)}")
 
-    # Save splits
-    train_df.to_csv(PROCESSED_DIR / "train.csv", index=False)
-    val_df.to_csv(PROCESSED_DIR / "val.csv", index=False)
-    test_df.to_csv(PROCESSED_DIR / "test.csv", index=False)
+    # Save splits as Parquet (binary format, immune to Windows newline/encoding bugs)
+    train_df.to_parquet(PROCESSED_DIR / "train.parquet", engine="pyarrow", index=False)
+    val_df.to_parquet(PROCESSED_DIR / "val.parquet", engine="pyarrow", index=False)
+    test_df.to_parquet(PROCESSED_DIR / "test.parquet", engine="pyarrow", index=False)
     logger.info(f"Saved splits to {PROCESSED_DIR}/")
 
     # Summary stats

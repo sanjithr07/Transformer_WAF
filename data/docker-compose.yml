@@ -1,5 +1,3 @@
-version: "3.8"
-
 # TransWAF Training Data Sources
 # Starts all three vulnerable web apps for traffic capture
 #
@@ -61,7 +59,7 @@ services:
   # Register a new user on first visit
   # Contains guided attack lessons for all OWASP Top 10
   webgoat:
-    image: webgoat/webgoat:latest
+    image: webgoat/webgoat:v2023.8
     environment:
       - WEBGOAT_PORT=8888
       - WEBWOLF_PORT=9090

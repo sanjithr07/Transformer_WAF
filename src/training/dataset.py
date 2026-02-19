@@ -43,7 +43,7 @@ class WAFDataset(Dataset):
         max_length: int = 512,
         label2id: dict = LABEL2ID,
     ):
-        self.df = pd.read_csv(filepath)
+        self.df = pd.read_parquet(filepath, engine="pyarrow")
         self.df = self.df.dropna(subset=["request_normalized", "label"]).reset_index(drop=True)
         self.tokenizer = tokenizer
         self.max_length = max_length
@@ -105,9 +105,9 @@ def get_dataloaders(
     Returns:
         (train_loader, val_loader, test_loader)
     """
-    train_ds = WAFDataset(data_dir / "train.csv", tokenizer, max_length)
-    val_ds = WAFDataset(data_dir / "val.csv", tokenizer, max_length)
-    test_ds = WAFDataset(data_dir / "test.csv", tokenizer, max_length)
+    train_ds = WAFDataset(data_dir / "train.parquet", tokenizer, max_length)
+    val_ds = WAFDataset(data_dir / "val.parquet", tokenizer, max_length)
+    test_ds = WAFDataset(data_dir / "test.parquet", tokenizer, max_length)
 
     train_loader = DataLoader(
         train_ds, batch_size=train_batch_size, shuffle=True,
