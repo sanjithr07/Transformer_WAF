@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TransWAF — AI Web Application Firewall</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+
+  <!-- ── Sidebar ──────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-icon">🛡️</span>
+      <span class="logo-text">TransWAF</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#overview" class="nav-item active" data-tab="overview">
+        <span class="nav-icon">📊</span> Overview
+      </a>
+      <a href="#analyzer" class="nav-item" data-tab="analyzer">
+        <span class="nav-icon">🔍</span> Payload Analyzer
+      </a>
+      <a href="#history" class="nav-item" data-tab="history">
+        <span class="nav-icon">📋</span> Request History
+      </a>
+      <a href="#docs" class="nav-item" data-tab="docs">
+        <span class="nav-icon">📡</span> API Reference
+      </a>
+    </nav>
+    <div class="sidebar-status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Connecting...</span>
+    </div>
+  </aside>
+
+  <!-- ── Main Content ─────────────────────────────────────── -->
+  <main class="main">
+
+    <!-- ── Header ── -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title" id="pageTitle">Overview</h1>
+        <span class="subtitle">Real-time intent-based firewall monitoring</span>
+      </div>
+      <div class="topbar-right">
+        <div class="mode-badge" id="modeBadge">
+          <span class="pulse"></span> LIVE
+        </div>
+        <div class="device-badge" id="deviceBadge">CPU</div>
+      </div>
+    </header>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- TAB: Overview                                          -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section id="tab-overview" class="tab active">
+
+      <!-- Stat Cards -->
+      <div class="stat-grid">
+        <div class="stat-card total">
+          <div class="stat-icon">🌐</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statTotal">0</div>
+            <div class="stat-label">Total Requests</div>
+          </div>
+          <div class="stat-sparkline" id="sparkTotal"></div>
+        </div>
+        <div class="stat-card blocked">
+          <div class="stat-icon">🚫</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statBlocked">0</div>
+            <div class="stat-label">Blocked</div>
+          </div>
+        </div>
+        <div class="stat-card flagged">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statFlagged">0</div>
+            <div class="stat-label">Flagged</div>
+          </div>
+        </div>
+        <div class="stat-card allowed">
+          <div class="stat-icon">✅</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statAllowed">0</div>
+            <div class="stat-label">Allowed</div>
+          </div>
+        </div>
+        <div class="stat-card latency">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statLatency">—</div>
+            <div class="stat-label">Avg Latency (ms)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="charts-row">
+        <div class="card chart-card">
+          <div class="card-header">
+            <h2>Attack Distribution</h2>
+            <span class="card-tag">Last 24h</span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="attackChart"></canvas>
+          </div>
+        </div>
+        <div class="card chart-card">
+          <div class="card-header">
+            <h2>Action Breakdown</h2>
+            <span class="card-tag">All time</span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="actionChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Alerts Feed -->
+      <div class="card feed-card">
+        <div class="card-header">
+          <h2>🔴 Live Alert Feed</h2>
+          <button class="btn-ghost" onclick="loadHistory()">Refresh</button>
+        </div>
+        <div class="feed" id="alertFeed">
+          <div class="feed-empty">No alerts yet. Send requests to /classify to see them here.</div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- TAB: Payload Analyzer                                  -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section id="tab-analyzer" class="tab">
+      <div class="analyzer-layout">
+
+        <div class="card analyzer-input-card">
+          <div class="card-header">
+            <h2>🔍 HTTP Request Analyzer</h2>
+            <span class="card-tag">Paste any HTTP request</span>
+          </div>
+          <textarea id="rawRequestInput" class="http-textarea" placeholder="Paste a raw HTTP request here...
+
+Example:
+GET /search?q=1'+UNION+SELECT+null,password+FROM+users-- HTTP/1.1
+Host: target.example.com
+User-Agent: Mozilla/5.0
+
+Or try:
+POST /login HTTP/1.1
+Host: example.com
+Content-Type: application/x-www-form-urlencoded
+
+username=admin&password=secure123"></textarea>
+          <div class="analyzer-actions">
+            <button class="btn-primary" onclick="analyzeRequest()">
+              <span id="analyzeBtnText">⚡ Analyze Request</span>
+            </button>
+            <button class="btn-ghost" onclick="loadExample('sqli')">SQLi Example</button>
+            <button class="btn-ghost" onclick="loadExample('xss')">XSS Example</button>
+            <button class="btn-ghost" onclick="loadExample('cmdi')">CMDi Example</button>
+            <button class="btn-ghost" onclick="loadExample('benign')">Benign Example</button>
+          </div>
+        </div>
+
+        <!-- Result Panel -->
+        <div id="resultPanel" class="card result-card hidden">
+          <div class="card-header">
+            <h2>Analysis Result</h2>
+            <div class="result-action-badge" id="resultActionBadge">—</div>
+          </div>
+
+          <div class="result-main">
+            <div class="result-label-block">
+              <div class="result-label" id="resultLabel">—</div>
+              <div class="result-confidence-bar">
+                <div class="conf-bar-fill" id="confBarFill" style="width:0%"></div>
+              </div>
+              <div class="result-confidence-text" id="resultConfidence">Confidence: —</div>
+            </div>
+
+            <div class="result-scores" id="resultScores"></div>
+          </div>
+
+          <!-- Attention Heatmap -->
+          <div class="heatmap-section">
+            <div class="heatmap-label">
+              🧠 Attention Saliency Map
+              <span class="heatmap-hint">Highlighted tokens influenced the classification</span>
+            </div>
+            <div class="heatmap-tokens" id="heatmapTokens"></div>
+          </div>
+
+          <!-- Normalized text preview -->
+          <div class="normalized-section">
+            <div class="normalized-label">📄 Normalized Input (what the model saw)</div>
+            <pre class="normalized-text" id="normalizedText"></pre>
+          </div>
+
+          <div class="result-meta">
+            <span>⚡ Latency: <strong id="resultLatency">—</strong></span>
+            <span>🏷️ Request ID: <strong id="resultId">—</strong></span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- TAB: Request History                                   -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section id="tab-history" class="tab">
+      <div class="card">
+        <div class="card-header">
+          <h2>📋 Request History</h2>
+          <div class="filter-row">
+            <select id="historyFilter" onchange="loadHistory()" class="select-ghost">
+              <option value="">All Actions</option>
+              <option value="BLOCK">Blocked</option>
+              <option value="FLAG">Flagged</option>
+              <option value="ALLOW">Allowed</option>
+            </select>
+            <button class="btn-ghost" onclick="loadHistory()">🔄 Refresh</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Time</th>
+                <th>Label</th>
+                <th>Confidence</th>
+                <th>Action</th>
+                <th>Threat</th>
+                <th>Latency</th>
+                <th>Preview</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody">
+              <tr>
+                <td colspan="8" class="table-empty">No history yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- TAB: API Reference                                     -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section id="tab-docs" class="tab">
+      <div class="card docs-card">
+        <div class="card-header">
+          <h2>📡 API Reference</h2>
+          <a href="/docs" target="_blank" class="btn-ghost">Open Swagger UI ↗</a>
+        </div>
+
+        <div class="endpoint-list">
+
+          <div class="endpoint">
+            <div class="endpoint-header">
+              <span class="method post">POST</span>
+              <code class="endpoint-path">/classify</code>
+              <span class="endpoint-desc">Classify a single HTTP request</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="code-block-label">Request Body</div>
+              <pre class="code-block">{
+  "raw_request": "GET /search?q=1+UNION+SELECT+null,password-- HTTP/1.1\r\nHost: example.com\r\n\r\n",
+  "explain": true
+}</pre>
+              <div class="code-block-label">Response</div>
+              <pre class="code-block">{
+  "label": "sqli",
+  "label_display": "SQL Injection",
+  "confidence": 0.9823,
+  "action": "BLOCK",
+  "threat_level": "HIGH",
+  "all_scores": {"benign": 0.01, "sqli": 0.98, "xss": 0.003, ...},
+  "saliency": {"UNION": 0.94, "SELECT": 0.91, "password": 0.87},
+  "latency_ms": 12.4,
+  "request_id": "a1b2c3d4"
+}</pre>
+            </div>
+          </div>
+
+          <div class="endpoint">
+            <div class="endpoint-header">
+              <span class="method post">POST</span>
+              <code class="endpoint-path">/batch</code>
+              <span class="endpoint-desc">Classify up to 100 requests at once</span>
+            </div>
+            <div class="endpoint-body">
+              <pre class="code-block">{"requests": ["GET /path?q=payload HTTP/1.1...", ...], "explain": false}</pre>
+            </div>
+          </div>
+
+          <div class="endpoint">
+            <div class="endpoint-header">
+              <span class="method get">GET</span>
+              <code class="endpoint-path">/stats</code>
+              <span class="endpoint-desc">Aggregated statistics (total, blocked, attack breakdown)</span>
+            </div>
+          </div>
+
+          <div class="endpoint">
+            <div class="endpoint-header">
+              <span class="method get">GET</span>
+              <code class="endpoint-path">/history?page=1&page_size=50&action=BLOCK</code>
+              <span class="endpoint-desc">Paginated request history with optional action filter</span>
+            </div>
+          </div>
+
+          <div class="endpoint">
+            <div class="endpoint-header">
+              <span class="method get">GET</span>
+              <code class="endpoint-path">/health</code>
+              <span class="endpoint-desc">System health check — model loaded status, device, demo mode</span>
+            </div>
+          </div>
+
+          <div class="integration-section">
+            <h3>Integration Examples</h3>
+            <div class="code-block-label">Python (direct pipeline)</div>
+            <pre class="code-block">from src.pipeline.transwaf import TransWAF
+
+waf = TransWAF(model_path="models/transwaf_best")
+result = waf.classify(raw_http_request)
+
+if result["action"] == "BLOCK":
+    raise SecurityError(result["label_display"])</pre>
+
+            <div class="code-block-label">cURL</div>
+            <pre class="code-block">curl -X POST http://localhost:8000/classify \
+  -H "Content-Type: application/json" \
+  -d '{"raw_request": "GET /?q=test HTTP/1.1\r\nHost: x.com\r\n\r\n"}'</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+
+</html>

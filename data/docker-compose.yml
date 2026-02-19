@@ -1,0 +1,74 @@
+version: "3.8"
+
+# TransWAF Training Data Sources
+# Starts all three vulnerable web apps for traffic capture
+#
+# Usage:
+#   docker compose up -d
+#   mitmdump -s data/capture_traffic.py --listen-port 8080
+#   Configure your browser proxy to 127.0.0.1:8080
+#   Browse & attack each app — traffic is auto-captured and labeled
+#
+# Then stop and import:
+#   docker compose down
+#   python data/preprocess.py --input data/raw/captured_traffic.csv --captured
+
+services:
+
+  # ── DVWA (Damn Vulnerable Web Application) ───────────────────────────────────
+  # Access: http://localhost:8081
+  # Default credentials: admin / password
+  # Setup: Go to http://localhost:8081/setup.php and click "Create / Reset Database"
+  # Set Security Level to LOW for maximum attack surface
+  dvwa:
+    image: ghcr.io/digininja/dvwa:latest
+    environment:
+      - DB_SERVER=dvwa-db
+      - DB_PORT=3306
+      - DB_DATABASE=dvwa
+      - DB_USERNAME=dvwa
+      - DB_PASSWORD=p@ssw0rd
+      - RECAPTCHA_PRIV_KEY=""
+      - RECAPTCHA_PUB_KEY=""
+    ports:
+      - "8081:80"
+    depends_on:
+      - dvwa-db
+    restart: unless-stopped
+
+  dvwa-db:
+    image: mariadb:10.1
+    environment:
+      - MYSQL_ROOT_PASSWORD=dvwa
+      - MYSQL_DATABASE=dvwa
+      - MYSQL_USER=dvwa
+      - MYSQL_PASSWORD=p@ssw0rd
+    volumes:
+      - dvwa-db-data:/var/lib/mysql
+
+  # ── OWASP Juice Shop ──────────────────────────────────────────────────────────
+  # Access: http://localhost:3000
+  # No setup needed — ready immediately
+  # Has 100+ challenges across SQLi, XSS, broken auth, etc.
+  juice-shop:
+    image: bkimminich/juice-shop:latest
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  # ── WebGoat ───────────────────────────────────────────────────────────────────
+  # Access: http://localhost:8888/WebGoat
+  # Register a new user on first visit
+  # Contains guided attack lessons for all OWASP Top 10
+  webgoat:
+    image: webgoat/webgoat:latest
+    environment:
+      - WEBGOAT_PORT=8888
+      - WEBWOLF_PORT=9090
+    ports:
+      - "8888:8888"
+      - "9090:9090"
+    restart: unless-stopped
+
+volumes:
+  dvwa-db-data:
