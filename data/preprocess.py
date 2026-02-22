@@ -252,15 +252,45 @@ def preprocess(source: str = "csic", input_file: Path = None,
     dist = df["label"].value_counts()
     logger.info(f"Class distribution:\n{dist.to_string()}")
 
+    # ── Optional merge with existing synthetic splits ────────
+    if merge:
+        existing_splits = []
+        for split_name in ["train.parquet", "val.parquet", "test.parquet"]:
+            p = PROCESSED_DIR / split_name
+            if p.exists():
+                existing_splits.append(pd.read_parquet(p, engine="pyarrow"))
+        if existing_splits:
+            existing_df = pd.concat(existing_splits, ignore_index=True)
+            logger.info(f"Merging {len(df)} captured samples with {len(existing_df)} existing samples")
+            df = pd.concat([existing_df, df], ignore_index=True).drop_duplicates()
+            # Re-normalize label column after concat
+            df["label"] = df["label"].astype(str)
+            dist = df["label"].value_counts()
+            logger.info(f"Merged class distribution:\n{dist.to_string()}")
+        else:
+            logger.warning("--merge specified but no existing splits found. Proceeding without merge.")
+
     # ── Stratified train/val/test split ──────────────────────
     logger.info("Splitting into train/val/test sets...")
     X = df[["request_normalized", "label"]]
 
+    # Check if any class has fewer than 2 samples (stratify would crash)
+    min_class_count = df["label"].value_counts().min()
+    use_stratify = min_class_count >= 2
+    if not use_stratify:
+        logger.warning(
+            f"Some classes have <2 samples (min={min_class_count}). "
+            "Falling back to non-stratified split. Use --merge to combine with synthetic data."
+        )
+
     train_df, temp_df = train_test_split(
-        X, test_size=0.30, stratify=X["label"], random_state=seed
+        X, test_size=0.30, stratify=X["label"] if use_stratify else None, random_state=seed
     )
+    # Re-check stratify for the second split
+    min_temp_count = temp_df["label"].value_counts().min()
+    use_stratify2 = min_temp_count >= 2
     val_df, test_df = train_test_split(
-        temp_df, test_size=0.50, stratify=temp_df["label"], random_state=seed
+        temp_df, test_size=0.50, stratify=temp_df["label"] if use_stratify2 else None, random_state=seed
     )
 
     logger.info(f"Train: {len(train_df)}, Val: {len(val_df)}, Test: {len(test_df)}")

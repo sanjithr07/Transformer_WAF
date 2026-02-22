@@ -1,0 +1,58 @@
+# ── Virtual Environments ─────────────────────────────────────
+venv/
+venv312/
+.venv/
+env/
+
+# ── Python Bytecode ──────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# ── Trained Models (large binary files — use Git LFS or share separately) ──
+models/
+*.pt
+*.pth
+*.bin
+*.safetensors
+
+# ── Datasets (raw & processed — regenerate with scripts) ─────
+data/raw/
+data/processed/
+*.parquet
+*.jsonl
+
+# ── Database ─────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Logs & TensorBoard ───────────────────────────────────────
+logs/
+*.log
+runs/
+
+# ── Environment Variables (never commit secrets!) ─────────────
+.env
+!.env.example
+
+# ── OS & Editor ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Build / Distribution ─────────────────────────────────────
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# ── Testing & Coverage ───────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/

@@ -69,7 +69,7 @@ def run_evaluation(checkpoint_dir: Path = None):
     results = {}
 
     # ── Clean Test Set ────────────────────────────────────────
-    test_file = cfg.data.processed_dir / "test.csv"
+    test_file = cfg.data.processed_dir / "test.parquet"
     if test_file.exists():
         test_ds = WAFDataset(test_file, tokenizer, cfg.data.max_seq_length)
         test_loader = DataLoader(test_ds, batch_size=cfg.training.eval_batch_size, shuffle=False)
@@ -100,7 +100,10 @@ def run_evaluation(checkpoint_dir: Path = None):
         }
 
     # ── Adversarial Test Set ──────────────────────────────────
-    adv_file = cfg.data.processed_dir / "adversarial_test.csv"
+    adv_file = cfg.data.processed_dir / "adversarial_test.parquet"
+    # Fall back to CSV if parquet doesn't exist
+    if not adv_file.exists():
+        adv_file = cfg.data.processed_dir / "adversarial_test.csv"
     if adv_file.exists():
         adv_ds = WAFDataset(adv_file, tokenizer, cfg.data.max_seq_length)
         adv_loader = DataLoader(adv_ds, batch_size=cfg.training.eval_batch_size, shuffle=False)

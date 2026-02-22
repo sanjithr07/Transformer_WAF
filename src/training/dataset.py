@@ -43,7 +43,14 @@ class WAFDataset(Dataset):
         max_length: int = 512,
         label2id: dict = LABEL2ID,
     ):
-        self.df = pd.read_parquet(filepath, engine="pyarrow")
+        filepath = Path(filepath)
+        if filepath.suffix == ".parquet":
+            self.df = pd.read_parquet(filepath, engine="pyarrow")
+        else:
+            # Use open() file handle to bypass Windows OSError 22 on direct path reads
+            with open(str(filepath), "r", encoding="utf-8") as fh:
+                self.df = pd.read_csv(fh, on_bad_lines="skip")
+
         self.df = self.df.dropna(subset=["request_normalized", "label"]).reset_index(drop=True)
         self.tokenizer = tokenizer
         self.max_length = max_length
