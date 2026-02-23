@@ -56,3 +56,6 @@ build/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# ── Project Documents ────────────────────────────────────────
+project_report.md
