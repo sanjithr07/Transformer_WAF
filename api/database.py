@@ -54,7 +54,7 @@ async def insert_request(result: dict) -> int:
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                datetime.utcnow().isoformat(),
+                datetime.utcnow().isoformat() + "Z",
                 result.get("label", "unknown"),
                 result.get("label_display", "Unknown"),
                 result.get("confidence", 0.0),
